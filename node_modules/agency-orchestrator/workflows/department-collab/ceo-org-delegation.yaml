@@ -1,0 +1,189 @@
+name: "CEO 组织架构协作"
+description: "CEO 分析需求 → 自动路由到对应部门（工程/市场/产品/HR）→ 部门内专业 Agent 并行执行 → CEO 汇总决策"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: "deepseek"        # 可选: claude-code（用本地 Claude Max 会员，无需 API key）
+  model: "deepseek-chat"
+  max_tokens: 4096
+
+concurrency: 3
+
+inputs:
+  - name: request
+    description: "CEO 收到的任务/需求/问题（如：我们要做一个新产品、竞对出了新功能怎么办、团队扩张计划…）"
+    required: true
+  - name: context
+    description: "背景信息（公司阶段、团队规模、预算约束等）"
+    required: false
+    default: "初创公司，团队 20 人，B 轮融资后"
+
+steps:
+  # ═══════════════════════════════════════
+  # 第一层：CEO 决策 — 分析需求，决定调动哪些部门
+  # ═══════════════════════════════════════
+  - id: ceo_analyze
+    role: "project-management/project-manager-senior"
+    task: |
+      你是公司 CEO。请分析以下需求，决定需要调动哪些部门协作。
+
+      需求：{{request}}
+      公司背景：{{context}}
+
+      你可以调动的部门：
+      - **工程部**：负责技术方案、架构设计、开发排期、技术债务
+      - **市场部**：负责市场调研、竞品分析、品牌策略、内容营销
+      - **产品部**：负责需求分析、产品规划、用户研究、优先级排序
+      - **HR 部**：负责招聘规划、团队组建、人才发展、组织架构
+
+      请输出：
+      1. **需求解读**：一句话总结这个需求的核心问题
+      2. **需要参与的部门**（必须明确写出部门名称：工程部 / 市场部 / 产品部 / HR部）
+      3. **每个部门的具体任务**（给每个部门的简要指令）
+      4. **优先级和时间预期**
+      5. **关键风险点**
+    output: ceo_decision
+
+  # ═══════════════════════════════════════
+  # 第二层：部门负责人 — 根据 CEO 指示展开工作
+  # （条件触发：CEO 提到哪个部门，哪个部门就启动）
+  # ═══════════════════════════════════════
+  - id: engineering_dept
+    role: "engineering/engineering-software-architect"
+    task: |
+      你是工程部负责人。CEO 给了以下指示：
+
+      {{ceo_decision}}
+
+      原始需求：{{request}}
+
+      请作为工程部负责人，输出：
+      1. **技术可行性评估**（能不能做、难点在哪）
+      2. **技术方案概要**（架构选型、技术栈建议）
+      3. **人力评估**（需要几个人、什么角色）
+      4. **排期估算**（里程碑拆分）
+      5. **技术风险**（依赖、性能、安全方面的风险）
+      6. **给 CEO 的建议**（你认为 CEO 应该知道的工程视角）
+    depends_on: [ceo_analyze]
+    condition: "{{ceo_decision}} contains 工程部"
+    output: engineering_report
+
+  - id: marketing_dept
+    role: "marketing/marketing-social-media-strategist"
+    task: |
+      你是市场部负责人。CEO 给了以下指示：
+
+      {{ceo_decision}}
+
+      原始需求：{{request}}
+
+      请作为市场部负责人，输出：
+      1. **市场机会分析**（市场规模、竞争格局、时间窗口）
+      2. **竞品动态**（主要竞品在做什么、我们的差异化定位）
+      3. **品牌/传播策略**（怎么讲故事、什么渠道、什么节奏）
+      4. **获客方案**（目标用户从哪来、获客成本预估）
+      5. **预算需求**（市场费用的大致拆分）
+      6. **给 CEO 的建议**（你认为 CEO 应该知道的市场视角）
+    depends_on: [ceo_analyze]
+    condition: "{{ceo_decision}} contains 市场部"
+    output: marketing_report
+
+  - id: product_dept
+    role: "product/product-manager"
+    task: |
+      你是产品部负责人。CEO 给了以下指示：
+
+      {{ceo_decision}}
+
+      原始需求：{{request}}
+
+      请作为产品部负责人，输出：
+      1. **需求分析**（用户痛点、场景拆解、需求优先级）
+      2. **产品方案**（核心功能定义、MVP 范围、用户旅程）
+      3. **竞品产品分析**（功能对比、体验差异）
+      4. **数据指标**（怎么衡量成功、关键北极星指标）
+      5. **产品路线图**（P0/P1/P2 功能排序，3 个月规划）
+      6. **给 CEO 的建议**（你认为 CEO 应该知道的产品视角）
+    depends_on: [ceo_analyze]
+    condition: "{{ceo_decision}} contains 产品部"
+    output: product_report
+
+  - id: hr_dept
+    role: "hr/hr-recruiter"
+    task: |
+      你是 HR 部负责人。CEO 给了以下指示：
+
+      {{ceo_decision}}
+
+      原始需求：{{request}}
+      公司背景：{{context}}
+
+      请作为 HR 部负责人，输出：
+      1. **团队现状评估**（当前团队能力是否匹配需求）
+      2. **招聘计划**（需要补充什么岗位、JD 要点、人数）
+      3. **组织架构建议**（是否需要调整汇报关系或新建团队）
+      4. **人才发展**（现有团队需要什么培训或成长路径）
+      5. **招聘时间表和成本**（招聘周期、预算）
+      6. **给 CEO 的建议**（你认为 CEO 应该知道的组织视角）
+    depends_on: [ceo_analyze]
+    condition: "{{ceo_decision}} contains HR"
+    output: hr_report
+
+  # ═══════════════════════════════════════
+  # 第三层：CEO 汇总 — 综合各部门意见做最终决策
+  # ═══════════════════════════════════════
+  - id: ceo_decision_final
+    role: "support/support-executive-summary-generator"
+    task: |
+      你是 CEO。各部门已提交工作报告，请综合所有信息做最终决策。
+
+      原始需求：{{request}}
+
+      CEO 初步分析：
+      {{ceo_decision}}
+
+      各部门报告（仅包含被激活的部门）：
+
+      工程部报告：
+      {{engineering_report}}
+
+      市场部报告：
+      {{marketing_report}}
+
+      产品部报告：
+      {{product_report}}
+
+      HR 部报告：
+      {{hr_report}}
+
+      请输出最终决策文档：
+
+      # CEO 决策备忘录
+
+      ## 执行摘要
+      [一段话总结决策和理由]
+
+      ## 决策要点
+      1. [做什么 / 不做什么]
+      2. [优先级排序]
+      3. [资源分配]
+
+      ## 各部门行动项
+      | 部门 | 行动项 | 负责人 | 截止日期 |
+      |------|--------|--------|---------|
+      [从各部门报告中提取具体可执行的行动]
+
+      ## 里程碑
+      [关键节点和检查点]
+
+      ## 预算总览
+      [汇总各部门的预算需求]
+
+      ## 风险与应对
+      [综合各部门提出的风险，给出应对策略]
+
+      ## 下次复盘时间
+      [建议的复盘节点]
+    depends_on: [engineering_dept, marketing_dept, product_dept, hr_dept]
+    depends_on_mode: any_completed

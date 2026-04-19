@@ -1,0 +1,88 @@
+name: "安全审计"
+description: "安全工程师 + 威胁检测并行审计 → 汇总安全报告"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: deepseek
+  model: deepseek-chat
+  max_tokens: 4096
+
+concurrency: 2
+
+inputs:
+  - name: code_or_system
+    description: "待审计的代码或系统描述"
+    required: true
+  - name: threat_model
+    description: "已知的威胁模型或关注的攻击面"
+    required: false
+    default: "全面审计，关注 OWASP Top 10"
+
+steps:
+  - id: vuln_scan
+    role: "engineering/engineering-security-engineer"
+    task: |
+      请对以下代码/系统进行安全漏洞扫描：
+
+      ## 审计对象
+      {{code_or_system}}
+
+      ## 威胁模型
+      {{threat_model}}
+
+      请检查以下方面：
+      1. OWASP Top 10 漏洞（注入、XSS、CSRF、SSRF 等）
+      2. 认证与授权缺陷
+      3. 敏感数据泄露风险（硬编码密钥、日志泄露等）
+      4. 不安全的依赖（已知 CVE）
+      5. 配置安全（CORS、CSP、安全头）
+      6. 加密使用是否正确
+
+      对每个发现，请标注：
+      - 严重程度（Critical / High / Medium / Low）
+      - 影响描述
+      - 修复建议
+    output: vuln_report
+
+  - id: threat_detect
+    role: "engineering/engineering-threat-detection-engineer"
+    task: |
+      请对以下代码/系统进行威胁检测分析：
+
+      ## 审计对象
+      {{code_or_system}}
+
+      ## 威胁模型
+      {{threat_model}}
+
+      请分析：
+      1. 攻击面枚举（外部输入点、API 端点、文件上传等）
+      2. 数据流中的信任边界
+      3. 权限提升路径
+      4. 侧信道攻击风险
+      5. 供应链安全风险
+      6. 运行时安全（内存安全、竞态条件）
+
+      对每个威胁，请按 STRIDE 模型分类并评估利用难度。
+    output: threat_report
+
+  - id: report
+    role: "engineering/engineering-security-engineer"
+    task: |
+      请综合以下两份安全分析报告，输出最终安全审计报告：
+
+      ## 漏洞扫描报告
+      {{vuln_report}}
+
+      ## 威胁检测报告
+      {{threat_report}}
+
+      请输出结构化的安全审计报告：
+      1. 执行摘要（总体安全评级 A-F）
+      2. 关键发现（按严重程度排序的 Top 10 问题）
+      3. 详细发现清单（含修复建议和优先级）
+      4. 修复路线图建议（短期/中期/长期）
+      5. 安全改进建议（架构层面）
+    depends_on: [vuln_scan, threat_detect]
+    output: final_security_report

@@ -1,0 +1,95 @@
+name: "API 文档生成"
+description: "分析代码生成 API 文档 → 验证完整性 → 输出最终文档"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: deepseek
+  model: deepseek-chat
+  max_tokens: 4096
+
+concurrency: 1
+
+inputs:
+  - name: api_code
+    description: "API 源代码（路由定义、控制器、接口声明等）"
+    required: true
+  - name: api_context
+    description: "API 上下文说明（项目背景、认证方式、基础 URL 等）"
+    required: false
+    default: "无额外上下文"
+
+steps:
+  - id: analyze
+    role: "engineering/engineering-technical-writer"
+    task: |
+      请分析以下 API 代码，生成完整的 API 文档：
+
+      ## API 代码
+      {{api_code}}
+
+      ## 上下文信息
+      {{api_context}}
+
+      请按以下结构生成文档：
+
+      ### 对每个 API 端点，请提供：
+      1. **接口路径**：HTTP 方法 + URL
+      2. **功能描述**：简洁说明接口用途
+      3. **请求参数**：
+         - Path 参数（类型、是否必填、说明）
+         - Query 参数（类型、是否必填、默认值、说明）
+         - Body 参数（完整的 JSON Schema，含嵌套结构）
+      4. **请求头**：需要的认证头和自定义头
+      5. **响应格式**：
+         - 成功响应（状态码 + 示例 JSON）
+         - 错误响应（各错误状态码 + 示例）
+      6. **调用示例**：cURL 命令示例
+
+      文档风格要求：清晰、准确、面向开发者。
+    output: api_doc_draft
+
+  - id: validate
+    role: "testing/testing-api-tester"
+    task: |
+      请审查以下 API 文档的完整性和准确性：
+
+      ## API 文档草稿
+      {{api_doc_draft}}
+
+      ## 原始 API 代码（供对照）
+      {{api_code}}
+
+      请检查以下方面：
+      1. **完整性**：是否所有端点都已记录、是否有遗漏的参数或响应字段
+      2. **准确性**：参数类型是否正确、必填/选填标注是否与代码一致
+      3. **示例有效性**：请求和响应示例是否合法、是否能实际运行
+      4. **错误处理**：是否记录了常见错误状态码和错误消息格式
+      5. **一致性**：命名风格、描述格式是否全文一致
+
+      请输出：
+      - 发现的问题清单（按严重程度排序）
+      - 每个问题的具体修改建议
+    depends_on: [analyze]
+    output: validation_report
+
+  - id: finalize
+    role: "engineering/engineering-technical-writer"
+    task: |
+      请根据审查反馈，修正并输出最终版 API 文档：
+
+      ## 文档草稿
+      {{api_doc_draft}}
+
+      ## 审查反馈
+      {{validation_report}}
+
+      请：
+      1. 逐条修复审查中指出的所有问题
+      2. 确保文档格式统一、排版美观
+      3. 在文档开头添加概览部分（API 列表、认证说明、通用错误码）
+      4. 在文档末尾添加更新日志模板
+
+      输出完整的、可直接使用的 API 文档。
+    depends_on: [validate]
+    output: final_api_doc

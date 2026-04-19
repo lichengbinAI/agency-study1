@@ -1,0 +1,92 @@
+{
+  "name": "agency-orchestrator",
+  "version": "0.4.2",
+  "description": "Multi-agent YAML workflow engine — 186 AI roles, auto DAG parallelism, zero code. Use your existing subscription (Claude Max / ChatGPT Plus / Copilot / Gemini free) — no API key needed. Industry first.",
+  "keywords": [
+    "multi-agent",
+    "ai-agents",
+    "agent-orchestration",
+    "orchestrator",
+    "workflow",
+    "yaml-workflow",
+    "dag",
+    "llm",
+    "claude",
+    "openai",
+    "deepseek",
+    "ollama",
+    "crewai-alternative",
+    "langgraph-alternative",
+    "autogen-alternative",
+    "no-code",
+    "no-api-key",
+    "subscription-based",
+    "copilot-cli",
+    "codex-cli",
+    "ai-roles",
+    "chinese-ai",
+    "copilot",
+    "cursor",
+    "windsurf",
+    "aider",
+    "kiro",
+    "trae",
+    "gemini-cli",
+    "codex",
+    "qwen",
+    "openclaw",
+    "opencode",
+    "claude-code",
+    "deerflow",
+    "antigravity",
+    "mcp"
+  ],
+  "author": "jnMetaCode",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/jnMetaCode/agency-orchestrator#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jnMetaCode/agency-orchestrator"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "agency-orchestrator": "dist/cli.js",
+    "ao": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "npx tsx test/run.ts && npx tsx test/condition.ts && npx tsx test/cli.ts && npx tsx test/compose.ts && npx tsx test/demo.ts && npx tsx test/e2e.ts && npx tsx test/e2e-condition.ts && npx tsx test/e2e-loop.ts && npx tsx test/mcp.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist/",
+    "workflows/",
+    "examples/",
+    "integrations/",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@modelcontextprotocol/sdk": "^1.28.0",
+    "agency-agents-zh": "^1.0.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,73 @@
+name: "README 国际化"
+description: "翻译 README → 审查技术术语 → 润色输出最终版"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: deepseek
+  model: deepseek-chat
+  max_tokens: 4096
+
+concurrency: 1
+
+inputs:
+  - name: readme_content
+    description: "原始 README 内容"
+    required: true
+  - name: target_language
+    description: "目标语言"
+    required: false
+    default: "English"
+
+steps:
+  - id: translate
+    role: "marketing/marketing-content-creator"
+    task: |
+      请将以下 README 文档翻译为 {{target_language}}：
+
+      {{readme_content}}
+
+      翻译要求：
+      1. 保持 Markdown 格式不变（标题、链接、代码块、表格等）
+      2. 代码示例中的注释翻译，代码本身不翻译
+      3. 技术术语保留英文（如 API、Docker、CI/CD 等）
+      4. 品牌名和项目名保留原文
+      5. 语言自然流畅，不要机翻味
+      6. 保留所有链接和图片引用
+    output: translated_draft
+
+  - id: review_terms
+    role: "engineering/engineering-technical-writer"
+    task: |
+      请审查以下翻译后的 README 文档中的技术术语使用：
+
+      ## 翻译稿
+      {{translated_draft}}
+
+      ## 原文（供对照）
+      {{readme_content}}
+
+      请检查：
+      1. 术语一致性：同一术语在全文中翻译是否统一
+      2. 术语准确性：技术概念翻译是否准确
+      3. 保留原则：应保留英文的术语是否误翻了
+      4. 格式完整性：Markdown 结构是否保持完好
+
+      请输出需要修改的术语列表和修改建议。
+    depends_on: [translate]
+    output: term_review
+
+  - id: polish
+    role: "marketing/marketing-content-creator"
+    task: |
+      请根据术语审查反馈，润色并输出最终版的翻译 README：
+
+      ## 翻译稿
+      {{translated_draft}}
+
+      ## 术语审查反馈
+      {{term_review}}
+
+      请修正所有指出的术语问题，统一语言风格，输出完整最终版文档。
+    depends_on: [review_terms]
+    output: final_readme

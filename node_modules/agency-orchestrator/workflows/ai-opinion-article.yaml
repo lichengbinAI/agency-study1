@@ -1,0 +1,122 @@
+name: "AI 爆款深度文章"
+description: "多角色协作写一篇有深度、引人入胜的 AI 观点文章 — 调研、构思、写作、审校"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: "deepseek"
+  model: "deepseek-chat"
+  max_tokens: 8192
+
+concurrency: 2
+
+inputs:
+  - name: topic
+    description: "文章主题"
+    required: true
+  - name: style
+    description: "文章风格（如：深度思考、犀利观点、温情感悟）"
+    default: "深度思考+犀利观点，有个人感悟"
+  - name: platform
+    description: "发布平台"
+    default: "微信公众号"
+
+steps:
+  - id: trend_research
+    role: "product/product-trend-researcher"
+    task: |
+      针对以下主题，做深度趋势调研：
+      主题：{{topic}}
+      平台：{{platform}}
+
+      请输出：
+      1. 当前公众讨论的热点角度（至少5个）
+      2. 大众最关心/焦虑/好奇的3个核心问题
+      3. 常见观点中的盲区或误区（这是爆款切入点）
+      4. 能引发共鸣的情感触发点
+      5. 建议的爆款标题方向（至少5个，要有冲击力）
+    output: trend_report
+
+  - id: narrative_design
+    role: "academic/academic-narratologist"
+    task: |
+      基于趋势调研，设计文章的叙事结构：
+
+      调研报告：
+      {{trend_report}}
+
+      主题：{{topic}}
+      风格：{{style}}
+
+      请设计：
+      1. 开篇钩子（第一段就要抓住读者，用一个具体场景或反直觉观点）
+      2. 文章主线（一条贯穿始终的核心论点）
+      3. 3-4个递进的论述层次（每层要有转折或意外）
+      4. 情感节奏图（哪里激烈、哪里沉思、哪里共鸣）
+      5. 结尾设计（不要鸡汤，要留有回味的思考）
+      6. 最终确定的标题（1个主标题 + 1个副标题）
+    output: narrative_structure
+    depends_on: [trend_research]
+
+  - id: depth_thinking
+    role: "academic/academic-narratologist"
+    task: |
+      作为一个深度思考者，针对这个主题提供独到的思考角度：
+
+      主题：{{topic}}
+      趋势调研：{{trend_report}}
+
+      请提供：
+      1. 3个大多数人没想到的深层观点（要有洞察力，不是陈词滥调）
+      2. 2个有力的类比或隐喻（让抽象概念变得生动）
+      3. 1个能引发争议但站得住脚的观点（爆款需要争议性）
+      4. 2-3个真实或虚构的具体案例/场景（增加说服力）
+      5. 对未来的一个大胆预判（有远见但不疯狂）
+    output: deep_insights
+    depends_on: [trend_research]
+
+  - id: write_article
+    role: "marketing/marketing-content-creator"
+    task: |
+      你是一位顶级内容创作者。请基于以下素材，写一篇 {{platform}} 爆款文章。
+
+      叙事结构：
+      {{narrative_structure}}
+
+      深度洞察：
+      {{deep_insights}}
+
+      风格要求：{{style}}
+
+      写作要求：
+      - 2000-3000字
+      - 第一段就要抓人（场景化开头或反直觉观点）
+      - 每200-300字要有一个吸引读者继续看的钩子
+      - 用具体案例和场景替代抽象说教
+      - 语言要有节奏感：长短句交替，偶尔用一句话单独成段
+      - 观点要鲜明，不要两头讨好
+      - 结尾要有力度，最好是一个让人想转发的金句
+      - 适当用一些修辞手法（排比、反问、类比）但不要过度
+      - 段落之间要有逻辑递进，不是并列堆砌
+
+      请直接输出完整文章（包含标题）。
+    output: article_draft
+    depends_on: [narrative_design, depth_thinking]
+
+  - id: polish
+    role: "marketing/marketing-content-creator"
+    task: |
+      请对以下文章做最终打磨：
+
+      {{article_draft}}
+
+      打磨要点：
+      1. 检查开头是否足够抓人（不行就重写开头）
+      2. 删掉所有废话和套话（"众所周知"、"不可否认"这类全删）
+      3. 强化金句密度（每500字至少一句值得划线的话）
+      4. 检查节奏：是否有连续超过3段的长段落？拆开
+      5. 结尾是否有力？最后一句是否值得截图转发？
+      6. 加上适合 {{platform}} 的排版提示（分段、加粗重点等）
+
+      输出最终定稿。
+    depends_on: [write_article]

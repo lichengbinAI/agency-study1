@@ -1,0 +1,113 @@
+name: "技术债务审计"
+description: "架构评估 + 代码扫描 + 测试分析 → 优先级排序"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: deepseek
+  model: deepseek-chat
+  max_tokens: 4096
+
+concurrency: 3
+
+inputs:
+  - name: codebase_description
+    description: "代码库描述（技术栈、模块结构、核心功能）"
+    required: true
+  - name: focus_area
+    description: "重点关注领域（如：数据库层、API 层、前端组件等）"
+    required: false
+    default: "全面审计，不限定重点"
+
+steps:
+  - id: arch_review
+    role: "engineering/engineering-software-architect"
+    task: |
+      请对以下代码库进行架构合理性评估：
+
+      ## 代码库描述
+      {{codebase_description}}
+
+      ## 重点关注
+      {{focus_area}}
+
+      请从以下维度分析架构债务：
+      1. **分层合理性**：各层职责是否清晰、是否存在跨层依赖
+      2. **模块耦合度**：模块间是否高内聚低耦合、循环依赖情况
+      3. **扩展性**：架构是否能支撑未来业务增长、扩展点是否预留
+      4. **一致性**：架构风格是否统一、是否存在多种模式混用
+      5. **技术选型**：依赖的框架/库是否仍在活跃维护、是否有更优替代
+
+      请为每项债务标注严重程度和修复成本（高/中/低）。
+    output: arch_report
+
+  - id: code_scan
+    role: "engineering/engineering-code-reviewer"
+    task: |
+      请对以下代码库进行代码质量扫描：
+
+      ## 代码库描述
+      {{codebase_description}}
+
+      ## 重点关注
+      {{focus_area}}
+
+      请识别以下类型的技术债务：
+      1. **代码重复**：是否存在大量复制粘贴代码、可提取的公共逻辑
+      2. **复杂度过高**：圈复杂度过高的函数、过长的文件/类
+      3. **命名混乱**：不一致的命名风格、含义不清的变量名
+      4. **注释与文档**：缺失关键注释、过时的文档、TODO/HACK 标记
+      5. **错误处理**：不完善的异常处理、吞掉的错误、缺失的日志
+      6. **废弃代码**：未使用的函数、注释掉的代码块、死代码路径
+
+      请为每个问题给出具体位置描述和建议的修复方案。
+    output: code_report
+
+  - id: test_analysis
+    role: "testing/testing-test-results-analyzer"
+    task: |
+      请对以下代码库的测试状况进行分析：
+
+      ## 代码库描述
+      {{codebase_description}}
+
+      ## 重点关注
+      {{focus_area}}
+
+      请评估以下方面：
+      1. **测试覆盖率**：哪些模块缺少测试、关键路径是否覆盖
+      2. **测试质量**：测试是否只验证正常路径、边界条件是否覆盖
+      3. **测试类型分布**：单元测试/集成测试/端到端测试的比例是否合理
+      4. **测试可维护性**：测试代码是否有重复、测试数据管理是否规范
+      5. **CI/CD 集成**：测试是否纳入自动化流水线、运行时间是否合理
+
+      请为每个薄弱点给出优先级和改进建议。
+    output: test_report
+
+  - id: prioritize
+    role: "product/product-sprint-prioritizer"
+    task: |
+      请综合以下三份技术债务分析报告，进行优先级排序：
+
+      ## 架构评估
+      {{arch_report}}
+
+      ## 代码质量扫描
+      {{code_report}}
+
+      ## 测试分析
+      {{test_report}}
+
+      请输出结构化的技术债务清单，按优先级排序：
+      1. **P0 - 紧急修复**：影响系统稳定性或安全性的债务，需本迭代解决
+      2. **P1 - 高优先级**：影响开发效率或代码质量的债务，建议近 2-3 个迭代解决
+      3. **P2 - 中优先级**：改善代码可维护性的债务，可安排在季度规划中
+      4. **P3 - 低优先级**：锦上添花的改进，有空闲时处理
+
+      对每项债务请说明：
+      - 问题描述
+      - 影响范围
+      - 修复成本估算（人天）
+      - 建议的修复方案
+    depends_on: [arch_review, code_scan, test_analysis]
+    output: debt_priority_list

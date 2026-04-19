@@ -1,0 +1,100 @@
+name: "SRE 健康检查"
+description: "可靠性 + 性能 + 基础设施三方检查 → SRE 汇总"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: deepseek
+  model: deepseek-chat
+  max_tokens: 4096
+
+concurrency: 3
+
+inputs:
+  - name: system_description
+    description: "系统描述（架构、技术栈、部署方式、用户规模等）"
+    required: true
+  - name: current_metrics
+    description: "当前监控指标数据（可选，如有可提供）"
+    required: false
+    default: "未提供，请根据系统描述给出建议"
+
+steps:
+  - id: reliability
+    role: "engineering/engineering-sre"
+    task: |
+      请对以下系统进行可靠性评估：
+
+      系统描述：{{system_description}}
+
+      当前指标：{{current_metrics}}
+
+      请评估：
+      1. SLO/SLI 定义是否合理（可用性、延迟、吞吐量）
+      2. 错误预算使用情况和策略
+      3. 故障模式分析（单点故障、级联故障风险）
+      4. 容灾与高可用方案（多活、灾备、自动切换）
+      5. 告警策略评估（是否有噪声、是否有盲区）
+      6. 可靠性改进建议
+    output: reliability_report
+
+  - id: performance
+    role: "testing/testing-performance-benchmarker"
+    task: |
+      请对以下系统进行性能基准检查：
+
+      系统描述：{{system_description}}
+
+      当前指标：{{current_metrics}}
+
+      请评估：
+      1. 响应时间分布（P50/P90/P99）
+      2. 吞吐量与并发承载能力
+      3. 资源利用率（CPU、内存、磁盘 I/O、网络）
+      4. 性能瓶颈识别（慢查询、热点、资源竞争）
+      5. 容量规划建议（当前水位、扩容阈值）
+      6. 性能优化建议及预期收益
+    output: performance_report
+
+  - id: infra
+    role: "support/support-infrastructure-maintainer"
+    task: |
+      请对以下系统进行基础设施健康检查：
+
+      系统描述：{{system_description}}
+
+      当前指标：{{current_metrics}}
+
+      请检查：
+      1. 基础设施配置合理性（实例规格、存储、网络）
+      2. 安全合规（补丁更新、访问控制、加密）
+      3. 备份与恢复策略（RPO/RTO 是否达标）
+      4. 成本效率（资源利用率、是否有浪费）
+      5. 自动化水平（IaC、CI/CD、自动扩缩容）
+      6. 基础设施改进建议
+    output: infra_report
+
+  - id: summary
+    role: "engineering/engineering-sre"
+    task: |
+      请综合可靠性、性能和基础设施三方面的检查结果，输出系统健康报告：
+
+      ## 可靠性评估
+      {{reliability_report}}
+
+      ## 性能基准检查
+      {{performance_report}}
+
+      ## 基础设施检查
+      {{infra_report}}
+
+      系统描述：{{system_description}}
+
+      请输出：
+      1. 总体健康评分（满分 100 分，含各维度分项）
+      2. 风险矩阵（影响 × 概率，标注高危项）
+      3. Top 5 优先改进事项（附理由和预期效果）
+      4. 各维度详细评分和关键发现
+      5. 30/60/90 天改进路线图
+    depends_on: [reliability, performance, infra]
+    output: health_report

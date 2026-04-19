@@ -1,0 +1,77 @@
+name: "数据管道审查"
+description: "数据工程师分析 → 数据库优化师检查 → 数据分析师验证输出质量"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: deepseek
+  model: deepseek-chat
+  max_tokens: 4096
+
+concurrency: 2
+
+inputs:
+  - name: pipeline_description
+    description: "数据管道的描述（架构、数据流、技术栈等）"
+    required: true
+  - name: data_schema
+    description: "数据模型 / 表结构说明（可选）"
+    required: false
+    default: "未提供"
+
+steps:
+  - id: engineer_review
+    role: "engineering/engineering-data-engineer"
+    task: |
+      请分析以下数据管道的架构和数据流设计：
+
+      管道描述：{{pipeline_description}}
+
+      数据模型：{{data_schema}}
+
+      请评估：
+      1. 管道架构合理性（数据源、ETL/ELT 流程、目标存储）
+      2. 数据流完整性（是否有数据丢失风险）
+      3. 容错与重试机制
+      4. 可扩展性（能否支撑数据量增长）
+      5. 改进建议
+    output: engineer_report
+
+  - id: db_optimize
+    role: "engineering/engineering-database-optimizer"
+    task: |
+      请从数据库性能角度审查以下数据管道：
+
+      管道描述：{{pipeline_description}}
+
+      数据模型：{{data_schema}}
+
+      请检查：
+      1. 查询效率（是否存在全表扫描、慢查询风险）
+      2. 索引策略（索引是否合理，是否有冗余或缺失）
+      3. 分区与分表策略
+      4. 写入性能（批量插入 vs 逐行插入）
+      5. 具体优化建议及预期收益
+    output: db_report
+
+  - id: quality_check
+    role: "support/support-analytics-reporter"
+    task: |
+      请综合数据工程和数据库优化的评审结果，验证数据管道的输出质量：
+
+      ## 数据工程评审
+      {{engineer_report}}
+
+      ## 数据库优化评审
+      {{db_report}}
+
+      原始管道描述：{{pipeline_description}}
+
+      请验证：
+      1. 输出数据的准确性和一致性
+      2. 数据质量监控指标是否完善
+      3. 异常数据的处理策略
+      4. 数据时效性（延迟是否可接受）
+      5. 综合改进建议和优先级排序
+    depends_on: [engineer_review, db_optimize]
+    output: quality_report

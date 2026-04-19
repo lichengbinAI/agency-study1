@@ -1,0 +1,79 @@
+name: "事故复盘"
+description: "故障指挥官梳理时间线 → SRE 分析根因 → 项目经理输出改进计划"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: deepseek
+  model: deepseek-chat
+  max_tokens: 4096
+
+concurrency: 1
+
+inputs:
+  - name: incident_description
+    description: "事故描述（现象、影响范围、持续时间等）"
+    required: true
+  - name: timeline
+    description: "事件时间线（可选，如已有初步记录）"
+    required: false
+    default: "未提供，请根据事故描述推断"
+
+steps:
+  - id: timeline_review
+    role: "engineering/engineering-incident-response-commander"
+    task: |
+      请梳理以下事故的完整时间线和响应过程：
+
+      事故描述：{{incident_description}}
+
+      已有时间线：{{timeline}}
+
+      请输出：
+      1. 事件时间线（从发现到恢复，精确到分钟）
+      2. 响应过程评估（告警是否及时、响应是否迅速）
+      3. 沟通协调记录（谁在什么时间做了什么决策）
+      4. 恢复手段及生效时间
+      5. 影响评估（受影响用户数、业务损失）
+      6. 响应过程中的问题和不足
+    output: timeline_report
+
+  - id: root_cause
+    role: "engineering/engineering-sre"
+    task: |
+      请根据事件时间线，深入分析事故的根本原因：
+
+      ## 事件时间线
+      {{timeline_report}}
+
+      原始事故描述：{{incident_description}}
+
+      请分析：
+      1. 直接原因（触发事故的具体操作或事件）
+      2. 根本原因（为什么会发生，5 Why 分析）
+      3. 贡献因素（哪些条件加剧了问题）
+      4. 防护缺失（监控、告警、限流等为何未能阻止）
+      5. 类似风险排查（其他系统是否有相同隐患）
+    depends_on: [timeline_review]
+    output: root_cause_report
+
+  - id: action_plan
+    role: "project-management/project-manager-senior"
+    task: |
+      请根据事件时间线和根因分析，输出改进计划和预防措施：
+
+      ## 事件时间线
+      {{timeline_report}}
+
+      ## 根因分析
+      {{root_cause_report}}
+
+      请输出：
+      1. 短期修复项（1 周内，防止同类事故再次发生）
+      2. 中期改进项（1 个月内，增强系统韧性）
+      3. 长期优化项（1 季度内，系统性提升）
+      4. 每个改进项的负责人角色、优先级、预期完成时间
+      5. 流程改进建议（on-call、告警、演练等）
+      6. 跟踪与验证机制（如何确认改进已落地）
+    depends_on: [root_cause]
+    output: improvement_plan

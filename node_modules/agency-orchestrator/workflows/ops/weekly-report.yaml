@@ -1,0 +1,90 @@
+name: "周报/月报生成"
+description: "数据整理 → 亮点提炼 → 高管摘要，从原始信息快速生成结构化周报"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: "deepseek"
+  model: "deepseek-chat"
+  max_tokens: 4096
+
+concurrency: 2
+
+inputs:
+  - name: raw_notes
+    description: "本周工作记录（流水账、会议纪要、完成事项等原始素材）"
+    required: true
+  - name: team
+    description: "团队/部门名称"
+    required: true
+  - name: period
+    description: "报告周期（如：2026-W13、3月）"
+    required: false
+    default: "本周"
+
+steps:
+  - id: organize
+    role: "specialized/specialized-meeting-assistant"
+    task: |
+      请将以下原始工作记录整理成结构化信息：
+
+      团队：{{team}}
+      周期：{{period}}
+      原始记录：
+      {{raw_notes}}
+
+      请输出：
+      1. **已完成事项**（按重要度排序，每项一句话）
+      2. **进行中事项**（进度百分比 + 下一步）
+      3. **阻塞/风险项**（原因 + 影响）
+      4. **关键数据/指标变化**（如有）
+      5. **下周计划**（从记录中推断）
+    output: organized_data
+
+  - id: highlights
+    role: "marketing/marketing-content-creator"
+    task: |
+      基于以下结构化数据，提炼本周亮点和叙事：
+
+      {{organized_data}}
+
+      团队：{{team}}
+
+      请输出：
+      1. **本周一句话总结**（概括最大成果）
+      2. **Top 3 亮点**（每个亮点用"成果 + 价值"结构，如"上线 X 功能，预计提升 Y%"）
+      3. **需要关注的风险**（用"现状 → 影响 → 建议"结构）
+      4. **数据看板**（用表格展示关键指标的本周 vs 上周对比）
+    output: highlights
+    depends_on: [organize]
+
+  - id: final_report
+    role: "support/support-executive-summary-generator"
+    task: |
+      请生成一份正式的周报，可直接发送给领导：
+
+      {{highlights}}
+
+      格式要求：
+      ## {{team}} {{period}}周报
+
+      ### 一句话总结
+      [总结]
+
+      ### 本周亮点
+      [亮点列表]
+
+      ### 关键指标
+      [数据表格]
+
+      ### 进行中
+      [事项列表]
+
+      ### 风险与阻塞
+      [风险列表]
+
+      ### 下周计划
+      [计划列表]
+
+      风格：专业简洁，突出成果和价值，避免流水账。
+    depends_on: [highlights]

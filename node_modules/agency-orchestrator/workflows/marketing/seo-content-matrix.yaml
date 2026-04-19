@@ -1,0 +1,98 @@
+name: "SEO 内容矩阵"
+description: "SEO 关键词研究 → 内容策略 + 批量内容生成 → SEO 优化审核，一次性生成一组 SEO 友好的文章"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: "deepseek"
+  model: "deepseek-chat"
+  max_tokens: 4096
+
+concurrency: 2
+
+inputs:
+  - name: domain
+    description: "业务领域/网站主题（如：SaaS 项目管理工具、跨境电商培训）"
+    required: true
+  - name: target_keywords
+    description: "核心关键词（逗号分隔，如：项目管理软件,团队协作工具,敏捷开发）"
+    required: true
+  - name: article_count
+    description: "生成文章数量"
+    required: false
+    default: "5"
+
+steps:
+  - id: keyword_research
+    role: "marketing/marketing-seo-specialist"
+    task: |
+      请围绕以下核心关键词进行 SEO 关键词研究：
+
+      业务领域：{{domain}}
+      核心关键词：{{target_keywords}}
+      目标文章数：{{article_count}}
+
+      请输出：
+      1. **关键词矩阵**（表格：关键词、搜索意图、预估难度、预估流量）
+      2. **长尾词扩展**（每个核心词扩展 5-8 个长尾词）
+      3. **内容缺口分析**（竞品有排名但我方缺失的主题）
+      4. **推荐的 {{article_count}} 篇文章选题**（每篇的目标关键词、搜索意图、建议标题）
+    output: keyword_plan
+
+  - id: content_strategy
+    role: "marketing/marketing-social-media-strategist"
+    task: |
+      基于以下关键词研究，制定内容矩阵策略：
+
+      {{keyword_plan}}
+
+      业务领域：{{domain}}
+
+      请输出：
+      1. **内容金字塔**（支柱页 → 集群页 → 长尾页的关系图）
+      2. **每篇文章的内容大纲**（H1/H2/H3 结构、字数建议、内链策略）
+      3. **发布节奏**（建议的发布顺序和频率）
+      4. **转化路径**（每篇文章的 CTA 设计和转化目标）
+    output: content_plan
+    depends_on: [keyword_research]
+
+  - id: write_articles
+    role: "marketing/marketing-content-creator"
+    task: |
+      基于以下内容策略，撰写 {{article_count}} 篇 SEO 文章：
+
+      {{content_plan}}
+
+      每篇文章要求：
+      - 按大纲的 H1/H2/H3 结构撰写
+      - 自然融入目标关键词（密度 1-2%）
+      - 开头直击用户痛点/搜索意图
+      - 包含实用信息、数据或案例
+      - 结尾有明确的 CTA
+      - 每篇 800-1500 字
+
+      用 --- 分隔每篇文章，每篇开头标注：
+      - 目标关键词
+      - Meta Title（60 字符内）
+      - Meta Description（155 字符内）
+    output: articles
+    depends_on: [content_strategy]
+
+  - id: seo_review
+    role: "marketing/marketing-seo-specialist"
+    task: |
+      请对以下文章进行 SEO 优化审核：
+
+      {{articles}}
+
+      原始关键词计划：
+      {{keyword_plan}}
+
+      每篇文章检查并输出：
+      1. **关键词优化**（标题/H2/首段/尾段是否包含目标词）
+      2. **内链建议**（文章之间可以互链的锚文本位置）
+      3. **Schema 标记建议**（FAQ、HowTo、Article 等结构化数据）
+      4. **优化后的 Meta 信息**（如需修改）
+      5. **可读性评分**（段落长度、句子复杂度、被动语态比例）
+      6. **最终修改建议**（具体到哪一段哪一句需要改什么）
+    depends_on: [write_articles]

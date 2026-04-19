@@ -1,0 +1,76 @@
+name: "数据仪表盘设计"
+description: "定义指标 → 设计布局 → 出视觉方案"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: deepseek
+  model: deepseek-chat
+  max_tokens: 4096
+
+concurrency: 2
+
+inputs:
+  - name: business_goal
+    description: "业务目标（仪表盘要解决什么问题、服务哪些用户）"
+    required: true
+  - name: data_sources
+    description: "可用数据源及其字段说明"
+    required: true
+
+steps:
+  - id: define_metrics
+    role: "support/support-analytics-reporter"
+    task: |
+      请根据业务目标和可用数据源，定义仪表盘的关键指标：
+
+      业务目标：{{business_goal}}
+
+      数据源：{{data_sources}}
+
+      请输出：
+      1. 核心指标（North Star Metric）及其定义
+      2. 支撑指标（按维度分组，如增长、留存、营收等）
+      3. 每个指标的计算口径和数据来源
+      4. 建议的时间粒度（实时 / 小时 / 天 / 周）
+      5. 指标之间的关联关系和下钻路径
+    output: metrics_definition
+
+  - id: design_layout
+    role: "design/design-ux-researcher"
+    task: |
+      请根据业务目标，设计仪表盘的信息架构和交互方案：
+
+      业务目标：{{business_goal}}
+
+      数据源：{{data_sources}}
+
+      请输出：
+      1. 用户角色分析（谁会看这个仪表盘、使用场景）
+      2. 信息层级（概览 → 详情 → 明细的层次结构）
+      3. 布局方案（各区域放什么内容、优先级排列）
+      4. 交互设计（筛选器、时间选择、下钻、联动）
+      5. 移动端适配建议
+    output: layout_design
+
+  - id: visual_design
+    role: "design/design-ui-designer"
+    task: |
+      请综合指标定义和布局方案，输出仪表盘的视觉设计方案：
+
+      ## 指标定义
+      {{metrics_definition}}
+
+      ## 布局方案
+      {{layout_design}}
+
+      业务目标：{{business_goal}}
+
+      请输出：
+      1. 图表类型选择（每个指标适合用什么图表展示）
+      2. 配色方案（主色、辅色、语义色如红涨绿跌）
+      3. 数据可视化规范（字号、间距、图表尺寸）
+      4. 状态与预警的视觉表达（正常 / 警告 / 异常）
+      5. 完整的仪表盘视觉设计说明
+    depends_on: [define_metrics, design_layout]
+    output: visual_plan

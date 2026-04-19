@@ -1,0 +1,108 @@
+name: "面试题设计"
+description: "招聘专家定义考察维度 → 心理学家设计行为面试题 + 技术专家设计技术题 → 招聘专家整合评分表"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: "deepseek"
+  model: "deepseek-chat"
+  max_tokens: 4096
+
+concurrency: 2
+
+inputs:
+  - name: position
+    description: "招聘岗位（如：高级后端工程师、产品经理、数据分析师）"
+    required: true
+  - name: level
+    description: "级别（如：P6/P7、3-5年经验、应届）"
+    required: true
+  - name: focus
+    description: "重点考察方向（如：系统设计能力、团队协作、数据敏感度）"
+    required: false
+    default: "专业能力、问题解决、团队协作"
+
+steps:
+  - id: define_dimensions
+    role: "hr/hr-recruiter"
+    task: |
+      请为以下岗位定义面试考察维度：
+
+      岗位：{{position}}
+      级别：{{level}}
+      重点考察：{{focus}}
+
+      请输出：
+      1. **岗位核心胜任力模型**（4-6 个维度，每个维度说明考察什么）
+      2. **各维度权重分配**（百分比）
+      3. **每个维度的达标标准**（什么表现算"通过"）
+      4. **红线项**（出现即否决的行为/回答）
+    output: dimensions
+
+  - id: behavioral_questions
+    role: "academic/academic-psychologist"
+    task: |
+      基于以下考察维度，设计行为面试题（STAR 法则）：
+
+      {{dimensions}}
+
+      岗位：{{position}}
+      级别：{{level}}
+
+      每个考察维度设计 2 道题，每道题包含：
+      1. **主问题**（开放式，引导候选人讲述真实经历）
+      2. **追问清单**（3-4 个追问，深挖 Situation → Task → Action → Result）
+      3. **优秀回答特征**（什么样的回答得高分）
+      4. **警示信号**（什么样的回答是减分项）
+
+      题目要自然不刻板，避免"请举一个例子"这种套话开头。
+    output: behavioral
+    depends_on: [define_dimensions]
+
+  - id: technical_questions
+    role: "engineering/engineering-backend-architect"
+    task: |
+      基于以下考察维度，设计技术面试题：
+
+      {{dimensions}}
+
+      岗位：{{position}}
+      级别：{{level}}
+
+      请设计 4-6 道技术题，难度递进，包含：
+      1. **基础题**（1-2 道，验证基本功）
+      2. **场景题**（2 道，给出实际业务场景，考察设计和解决问题能力）
+      3. **开放题**（1-2 道，考察技术深度和视野）
+
+      每道题包含：
+      - 题目描述
+      - 考察点
+      - 参考答案要点
+      - 评分标准（1-5 分各档标准）
+
+      如果岗位非技术类，请改为专业能力测试题。
+    output: technical
+    depends_on: [define_dimensions]
+
+  - id: interview_guide
+    role: "hr/hr-recruiter"
+    task: |
+      请将以下面试题整合为一份完整的面试官指南：
+
+      ## 考察维度
+      {{dimensions}}
+
+      ## 行为面试题
+      {{behavioral}}
+
+      ## 技术/专业面试题
+      {{technical}}
+
+      输出格式：
+      1. **面试流程安排**（时间分配建议，如开场5分钟、行为面20分钟等）
+      2. **完整题目清单**（按面试顺序排列，标注考察维度和建议时间）
+      3. **评分表模板**（表格形式，列出各维度的评分标准）
+      4. **面试官注意事项**（提问技巧、避免的偏见等）
+
+      风格：实用、可直接打印使用。
+    depends_on: [behavioral_questions, technical_questions]

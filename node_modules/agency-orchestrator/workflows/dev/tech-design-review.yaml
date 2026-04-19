@@ -1,0 +1,115 @@
+name: "技术方案评审"
+description: "架构师出方案 → 后端架构师 + 安全工程师并行评审 → 代码审查员整合意见，输出评审结论"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: "deepseek"
+  model: "deepseek-chat"
+  max_tokens: 4096
+
+concurrency: 2
+
+inputs:
+  - name: requirement
+    description: "需求描述（要做什么、背景、约束条件）"
+    required: true
+  - name: tech_stack
+    description: "技术栈（如：Node.js + PostgreSQL + Redis）"
+    required: false
+    default: "不限"
+
+steps:
+  - id: design
+    role: "engineering/engineering-software-architect"
+    task: |
+      请为以下需求设计技术方案：
+
+      需求：{{requirement}}
+      技术栈：{{tech_stack}}
+
+      请输出完整的技术设计文档：
+      1. **背景与目标**（问题是什么、成功标准）
+      2. **方案概述**（一段话描述核心设计思路）
+      3. **架构设计**（组件图、数据流、关键接口定义）
+      4. **数据模型**（核心表/集合设计，字段说明）
+      5. **关键技术决策**（为什么选 A 不选 B，tradeoff 分析）
+      6. **API 设计**（核心接口的 URL、Method、请求/响应示例）
+      7. **非功能需求**（性能目标、可用性、可扩展性）
+      8. **里程碑与排期建议**
+    output: design_doc
+
+  - id: arch_review
+    role: "engineering/engineering-backend-architect"
+    task: |
+      请从后端架构角度评审以下技术方案：
+
+      {{design_doc}}
+
+      评审维度：
+      1. **架构合理性**（分层是否清晰、职责是否单一、耦合度）
+      2. **性能**（有无性能瓶颈、是否需要缓存/队列/分库分表）
+      3. **可扩展性**（流量增长 10 倍时方案是否能撑住）
+      4. **容错与高可用**（单点故障、降级策略、数据一致性）
+      5. **数据模型**（索引设计、查询模式匹配度）
+      6. **技术债务风险**（是否引入难以维护的复杂度）
+
+      每条意见标注：✅ 合理 / ⚠️ 建议优化 / ❌ 需要重新设计
+      给出具体的改进建议，不要只说"需要优化"。
+    output: arch_feedback
+    depends_on: [design]
+
+  - id: security_review
+    role: "engineering/engineering-security-engineer"
+    task: |
+      请从安全角度评审以下技术方案：
+
+      {{design_doc}}
+
+      评审维度：
+      1. **认证与授权**（身份验证方案、权限模型、Token 管理）
+      2. **数据安全**（敏感数据加密、传输加密、脱敏策略）
+      3. **输入验证**（SQL 注入、XSS、SSRF 等 OWASP Top 10）
+      4. **API 安全**（限流、防刷、签名验证）
+      5. **依赖安全**（第三方库风险、供应链安全）
+      6. **合规**（日志审计、数据留存、隐私保护）
+
+      每条意见标注风险等级：🔴 高 / 🟡 中 / 🟢 低
+      给出具体修复方案，不要只指出问题。
+    output: security_feedback
+    depends_on: [design]
+
+  - id: review_summary
+    role: "engineering/engineering-code-reviewer"
+    task: |
+      请整合以下评审意见，输出最终的技术评审结论：
+
+      ## 原始设计
+      {{design_doc}}
+
+      ## 架构评审
+      {{arch_feedback}}
+
+      ## 安全评审
+      {{security_feedback}}
+
+      输出格式：
+
+      # 技术方案评审结论
+
+      ## 总体评价
+      [通过 / 有条件通过 / 需要重新设计]
+      [一段话总结方案质量和主要问题]
+
+      ## 必须修改（阻塞项）
+      [列出所有 ❌ 和 🔴 级别的问题及修改方案]
+
+      ## 建议修改（非阻塞）
+      [列出所有 ⚠️ 和 🟡 级别的问题及优化建议]
+
+      ## 确认合理的设计决策
+      [列出所有 ✅ 的点，给设计者信心]
+
+      ## 修改后复审清单
+      [列出需要在修改后重点检查的项目]
+    depends_on: [arch_review, security_review]

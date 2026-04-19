@@ -1,0 +1,83 @@
+name: "内容创作流水线"
+description: "从主题到成稿的完整内容创作流程 — 研究、写作、品牌审核"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: "claude"
+  model: "claude-sonnet-4-20250514"
+  max_tokens: 4096
+
+concurrency: 2
+
+inputs:
+  - name: topic
+    description: "内容主题"
+    required: true
+  - name: target_audience
+    description: "目标受众"
+    required: true
+  - name: platform
+    description: "发布平台（如：公众号、知乎、小红书）"
+    required: true
+
+steps:
+  - id: research
+    role: "marketing/marketing-social-media-strategist"
+    task: |
+      为以下主题做内容研究：
+      主题：{{topic}}
+      目标受众：{{target_audience}}
+      平台：{{platform}}
+
+      请输出：
+      1. 关键信息点
+      2. 受众关注的痛点
+      3. 竞品内容分析
+      4. 建议的内容角度
+    output: research_report
+
+  - id: draft
+    role: "marketing/marketing-content-creator"
+    task: |
+      基于以下研究，撰写一篇适合 {{platform}} 的文章：
+
+      研究报告：
+      {{research_report}}
+
+      要求：
+      - 目标受众：{{target_audience}}
+      - 风格适合 {{platform}}
+      - 包含引人注目的标题
+      - 结构清晰，易于阅读
+    output: draft_content
+    depends_on: [research]
+
+  - id: brand_review
+    role: "marketing/marketing-growth-hacker"
+    task: |
+      请审核以下内容的品牌一致性：
+
+      {{draft_content}}
+
+      评审要点：
+      1. 品牌调性是否一致
+      2. 信息准确性
+      3. 是否有敏感内容
+      4. 改进建议
+    output: review_feedback
+    depends_on: [draft]
+
+  - id: final_edit
+    role: "marketing/marketing-content-creator"
+    task: |
+      根据品牌审核反馈，修改并定稿：
+
+      原文：
+      {{draft_content}}
+
+      审核反馈：
+      {{review_feedback}}
+
+      请输出最终稿件。
+    depends_on: [brand_review]

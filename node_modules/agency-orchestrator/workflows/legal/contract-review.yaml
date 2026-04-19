@@ -1,0 +1,106 @@
+name: "合同审查"
+description: "合同审查专家逐条分析 → 法务合规员补充合规风险 → 整合输出审查意见和修改建议"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: "deepseek"
+  model: "deepseek-chat"
+  max_tokens: 4096
+
+concurrency: 2
+
+inputs:
+  - name: contract
+    description: "合同全文或核心条款（粘贴文本）"
+    required: true
+  - name: party
+    description: "我方身份（如：甲方/采购方/服务提供方/被投资方）"
+    required: true
+  - name: concern
+    description: "特别关注的问题（如：付款条件、竞业限制、知识产权）"
+    required: false
+    default: "整体风险"
+
+steps:
+  - id: clause_analysis
+    role: "legal/legal-contract-reviewer"
+    task: |
+      请对以下合同进行逐条审查：
+
+      我方身份：{{party}}
+      特别关注：{{concern}}
+
+      合同内容：
+      {{contract}}
+
+      请逐条分析，每条输出：
+      1. **条款摘要**（一句话）
+      2. **风险等级**（🔴高风险 / 🟡中风险 / 🟢低风险）
+      3. **风险分析**（该条款对我方的不利影响）
+      4. **修改建议**（具体的替代条款文本）
+
+      重点关注：
+      - 付款条件和违约金
+      - 知识产权归属
+      - 保密条款范围
+      - 竞业限制
+      - 争议解决方式
+      - 合同终止条件
+      - 不可抗力条款
+    output: clause_review
+
+  - id: compliance_check
+    role: "support/support-legal-compliance-checker"
+    task: |
+      基于以下合同条款审查，补充合规风险分析：
+
+      {{clause_review}}
+
+      合同原文：
+      {{contract}}
+
+      请检查：
+      1. **法律合规**（是否符合《民法典》合同编相关规定）
+      2. **数据合规**（是否涉及个人信息处理，是否符合《个保法》《数安法》）
+      3. **行业特殊合规**（是否有行业特定的合规要求）
+      4. **格式条款问题**（是否有无效的格式条款）
+      5. **缺失条款**（通常应有但合同中缺少的重要条款）
+    output: compliance_report
+    depends_on: [clause_analysis]
+
+  - id: final_opinion
+    role: "legal/legal-contract-reviewer"
+    task: |
+      请整合以下审查结果，输出一份完整的合同审查意见书：
+
+      ## 条款审查
+      {{clause_review}}
+
+      ## 合规检查
+      {{compliance_report}}
+
+      输出格式：
+
+      # 合同审查意见书
+
+      ## 总体评价
+      [一段话总结合同整体风险水平和建议]
+
+      ## 高风险条款（必须修改）
+      [列出所有红色风险条款及修改建议]
+
+      ## 中风险条款（建议修改）
+      [列出所有黄色风险条款及修改建议]
+
+      ## 缺失条款（建议补充）
+      [列出应当补充的条款]
+
+      ## 合规问题
+      [列出合规风险及整改建议]
+
+      ## 谈判要点
+      [按优先级列出谈判时应争取的条款修改]
+
+      风格：专业严谨，结论明确，修改建议可直接用于谈判。
+    depends_on: [compliance_check]

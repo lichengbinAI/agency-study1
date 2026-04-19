@@ -1,0 +1,103 @@
+name: "小红书种草笔记"
+description: "小红书专家选题策划 → 内容创作 + 视觉方案 → 小红书运营优化，批量生成高质量种草内容"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: "deepseek"
+  model: "deepseek-chat"
+  max_tokens: 4096
+
+concurrency: 2
+
+inputs:
+  - name: product
+    description: "产品/品牌名称和核心卖点"
+    required: true
+  - name: category
+    description: "品类（如：护肤、数码、家居、美食、穿搭）"
+    required: true
+  - name: count
+    description: "需要生成几篇笔记"
+    required: false
+    default: "3"
+
+steps:
+  - id: topic_planning
+    role: "marketing/marketing-xiaohongshu-specialist"
+    task: |
+      请为以下产品策划 {{count}} 篇小红书种草笔记的选题：
+
+      产品：{{product}}
+      品类：{{category}}
+
+      每个选题输出：
+      1. **笔记标题**（符合小红书爆款标题公式，带 emoji）
+      2. **内容角度**（测评/教程/好物分享/避雷/合集，选最适合的）
+      3. **目标人群**（具体到场景，如"25岁加班党的急救护肤"）
+      4. **关键词布局**（搜索词 + 长尾词，各 3-5 个）
+      5. **封面方向**（什么样的封面图最吸引点击）
+
+      要求：选题要差异化，覆盖不同搜索意图（种草/教程/对比）。
+    output: topics
+
+  - id: write_notes
+    role: "marketing/marketing-content-creator"
+    task: |
+      基于以下选题，撰写 {{count}} 篇完整的小红书笔记正文：
+
+      {{topics}}
+
+      产品：{{product}}
+
+      每篇笔记要求：
+      - 开头用个人经历/痛点切入（不要广告感）
+      - 正文结构：痛点共鸣 → 发现产品 → 使用体验 → 效果对比 → 总结推荐
+      - 语气：真实分享感，像在跟闺蜜/朋友聊天
+      - 适当使用 emoji 分段，增加可读性
+      - 字数 300-500 字
+      - 末尾带 3-5 个话题标签
+      - 自然植入关键词，不要硬塞
+
+      避免：过度营销感、虚假宣传、绝对化用语。
+    output: notes
+    depends_on: [topic_planning]
+
+  - id: visual_plan
+    role: "design/design-visual-storyteller"
+    task: |
+      基于以下笔记内容，设计配图方案：
+
+      {{notes}}
+
+      产品：{{product}}
+      品类：{{category}}
+
+      每篇笔记输出：
+      1. **封面图方案**（构图、色调、文字排版、拍摄角度）
+      2. **内页图片**（3-6 张图的内容和顺序安排）
+      3. **拍摄/设计建议**（光线、道具、场景、滤镜风格）
+      4. **文字覆盖建议**（图片上需要加的关键文字）
+
+      风格参考：小红书当前热门的视觉趋势。
+    output: visual_plan
+    depends_on: [topic_planning]
+
+  - id: optimize
+    role: "marketing/marketing-xiaohongshu-operator"
+    task: |
+      请对以下小红书笔记做最终优化和发布建议：
+
+      ## 笔记正文
+      {{notes}}
+
+      ## 视觉方案
+      {{visual_plan}}
+
+      请输出：
+      1. **各笔记的最终优化版本**（修正标题、正文细节、标签）
+      2. **发布时间建议**（最佳发布时段）
+      3. **互动策略**（评论区预埋、回复话术）
+      4. **数据监测指标**（关注哪些数据判断效果）
+      5. **迭代建议**（如果某篇效果好/差，下一步怎么做）
+    depends_on: [write_notes, visual_plan]

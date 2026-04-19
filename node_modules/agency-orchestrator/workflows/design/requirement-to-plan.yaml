@@ -1,0 +1,83 @@
+name: "需求到计划"
+description: "产品经理分析需求 → 架构师设计方案 → 项目经理拆任务"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: deepseek
+  model: deepseek-chat
+  max_tokens: 4096
+
+concurrency: 1
+
+inputs:
+  - name: requirement
+    description: "需求描述（用户故事、功能说明、业务背景等）"
+    required: true
+  - name: constraints
+    description: "约束条件（时间、预算、技术栈限制等）"
+    required: false
+    default: "无特殊约束"
+
+steps:
+  - id: analyze_req
+    role: "product/product-manager"
+    task: |
+      请分析以下需求，明确范围和优先级：
+
+      需求描述：{{requirement}}
+
+      约束条件：{{constraints}}
+
+      请输出：
+      1. 需求理解（用一段话概括核心诉求）
+      2. 用户价值分析（解决了什么痛点、影响多少用户）
+      3. 功能范围界定（MVP 包含什么、不包含什么）
+      4. 优先级排序（P0/P1/P2，附理由）
+      5. 验收标准（如何判定需求已完成）
+      6. 风险点和待确认事项
+    output: req_analysis
+
+  - id: tech_design
+    role: "engineering/engineering-software-architect"
+    task: |
+      请根据产品需求分析，设计技术方案：
+
+      ## 需求分析
+      {{req_analysis}}
+
+      原始需求：{{requirement}}
+
+      约束条件：{{constraints}}
+
+      请输出：
+      1. 技术方案概述（一句话说明整体思路）
+      2. 系统架构设计（模块划分、接口设计、数据流）
+      3. 技术选型及理由
+      4. 数据模型设计
+      5. 关键技术难点及解决思路
+      6. 非功能性需求方案（性能、安全、可扩展性）
+      7. 技术风险评估
+    depends_on: [analyze_req]
+    output: tech_plan
+
+  - id: task_breakdown
+    role: "project-management/project-manager-senior"
+    task: |
+      请根据需求分析和技术方案，拆解为可执行的任务：
+
+      ## 需求分析
+      {{req_analysis}}
+
+      ## 技术方案
+      {{tech_plan}}
+
+      请输出：
+      1. 任务清单（每个任务包含：ID、标题、描述、负责角色）
+      2. 任务依赖关系（哪些可并行、哪些有先后）
+      3. 工时估算（每个任务的预估人天）
+      4. 里程碑规划（按阶段划分，含时间节点）
+      5. 风险缓冲建议
+      6. 总工期估算和关键路径
+    depends_on: [tech_design]
+    output: task_plan

@@ -1,0 +1,79 @@
+name: "UX 体验审查"
+description: "UX 研究员评估 + 无障碍审核 → UX 架构师汇总"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: deepseek
+  model: deepseek-chat
+  max_tokens: 4096
+
+concurrency: 2
+
+inputs:
+  - name: product_description
+    description: "产品描述（功能说明、目标用户、核心流程）"
+    required: true
+  - name: screenshots_or_flow
+    description: "界面截图描述或用户流程图（可选）"
+    required: false
+    default: "未提供"
+
+steps:
+  - id: ux_eval
+    role: "design/design-ux-researcher"
+    task: |
+      请对以下产品进行用户体验评估：
+
+      产品描述：{{product_description}}
+
+      界面/流程：{{screenshots_or_flow}}
+
+      请从以下维度评估：
+      1. 可用性启发式评估（基于 Nielsen 十大原则）
+      2. 用户认知负荷分析
+      3. 信息架构合理性
+      4. 交互流程效率（关键任务步数、操作成本）
+      5. 错误预防与恢复机制
+      6. 体验优化建议（按优先级排序）
+    output: ux_report
+
+  - id: a11y_check
+    role: "testing/testing-accessibility-auditor"
+    task: |
+      请对以下产品进行无障碍合规检查：
+
+      产品描述：{{product_description}}
+
+      界面/流程：{{screenshots_or_flow}}
+
+      请检查：
+      1. WCAG 2.1 AA 级合规性评估
+      2. 视觉无障碍（色彩对比度、字号、间距）
+      3. 键盘可访问性（Tab 顺序、焦点管理）
+      4. 屏幕阅读器兼容性（语义化标签、ARIA 属性）
+      5. 动态内容的无障碍处理（动画、弹窗、实时更新）
+      6. 不合规项清单及修复建议
+    output: a11y_report
+
+  - id: summary
+    role: "design/design-ux-architect"
+    task: |
+      请综合 UX 评估和无障碍审核结果，输出汇总审查报告：
+
+      ## UX 体验评估
+      {{ux_report}}
+
+      ## 无障碍审核
+      {{a11y_report}}
+
+      产品描述：{{product_description}}
+
+      请输出：
+      1. 总体体验评分（满分 10 分，含各维度分项）
+      2. 关键问题清单（严重程度：高/中/低）
+      3. 改进路线图（短期速赢 → 中期优化 → 长期规划）
+      4. 无障碍合规差距及修复优先级
+      5. 最佳实践建议
+    depends_on: [ux_eval, a11y_check]
+    output: review_summary

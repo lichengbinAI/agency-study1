@@ -1,0 +1,103 @@
+name: "发布检查清单"
+description: "SRE + 性能 + 安全三方检查 → Go/No-Go 决策"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: deepseek
+  model: deepseek-chat
+  max_tokens: 4096
+
+concurrency: 3
+
+inputs:
+  - name: release_notes
+    description: "发布说明（变更列表、新功能、修复的 bug）"
+    required: true
+  - name: version
+    description: "版本号"
+    required: true
+
+steps:
+  - id: infra_check
+    role: "engineering/engineering-sre"
+    task: |
+      请对以下版本发布进行基础设施就绪检查：
+
+      版本：{{version}}
+
+      发布说明：
+      {{release_notes}}
+
+      请检查以下方面并给出 ✅/❌ 评估：
+      1. 部署流水线是否就绪（CI/CD 配置、构建脚本）
+      2. 回滚方案是否准备（回滚脚本、数据库迁移可逆性）
+      3. 监控告警是否配置（关键指标、告警阈值）
+      4. 容量规划是否充分（预期流量、资源预留）
+      5. 依赖服务状态（上下游服务兼容性）
+      6. 灰度发布计划（发布比例、观察时间）
+    output: infra_report
+
+  - id: perf_check
+    role: "testing/testing-performance-benchmarker"
+    task: |
+      请对以下版本进行性能基准验证：
+
+      版本：{{version}}
+
+      发布说明：
+      {{release_notes}}
+
+      请评估：
+      1. 变更是否可能引入性能回退
+      2. 关键接口的预期延迟影响
+      3. 数据库查询的性能影响
+      4. 内存使用变化预估
+      5. 并发处理能力影响
+      6. 性能测试建议（需要额外测试的场景）
+    output: perf_report
+
+  - id: security_final
+    role: "engineering/engineering-security-engineer"
+    task: |
+      请对以下版本进行最终安全检查：
+
+      版本：{{version}}
+
+      发布说明：
+      {{release_notes}}
+
+      请检查：
+      1. 新增代码是否引入安全漏洞
+      2. 依赖更新是否有已知 CVE
+      3. 配置变更是否影响安全策略
+      4. 数据处理变更是否合规
+      5. API 变更是否影响认证授权
+      6. 敏感信息是否意外暴露
+    output: security_report
+
+  - id: go_no_go
+    role: "project-management/project-manager-senior"
+    task: |
+      请综合以下三方检查报告，做出发布决策：
+
+      版本：{{version}}
+
+      ## 基础设施检查
+      {{infra_report}}
+
+      ## 性能评估
+      {{perf_report}}
+
+      ## 安全检查
+      {{security_report}}
+
+      请输出：
+      1. **决策：🟢 Go / 🔴 No-Go / 🟡 有条件 Go**
+      2. 决策依据（关键考量点）
+      3. 如果是 No-Go，列出阻塞项和解决方案
+      4. 如果是有条件 Go，列出必须在发布前/后完成的事项
+      5. 发布后监控重点（前 24 小时关注什么）
+      6. 回滚触发条件（什么情况下立即回滚）
+    depends_on: [infra_check, perf_check, security_final]
+    output: release_decision

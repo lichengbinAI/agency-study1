@@ -1,0 +1,68 @@
+name: "DeepSeek 实战测试"
+description: "3步工作流：产品分析 → 技术+设计并行评估 → 汇总，验证 DAG 并行和变量传递"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: "deepseek"
+  model: "deepseek-chat"
+  max_tokens: 1024
+  timeout: 60000
+  retry: 2
+
+concurrency: 2
+
+inputs:
+  - name: idea
+    description: "产品创意"
+    required: true
+
+steps:
+  - id: pm_analyze
+    role: "product/product-manager"
+    task: |
+      请用中文简要分析以下产品创意（200字以内）：
+      - 目标用户是谁
+      - 核心价值主张
+      - 最大风险
+
+      创意：{{idea}}
+    output: analysis
+
+  - id: tech_eval
+    role: "engineering/engineering-software-architect"
+    task: |
+      请用中文基于以下分析，评估技术可行性（150字以内）：
+      - 推荐技术栈
+      - 预估难度（高/中/低）
+      - 一个关键技术风险
+
+      {{analysis}}
+    output: tech_report
+    depends_on: [pm_analyze]
+
+  - id: design_eval
+    role: "design/design-ux-researcher"
+    task: |
+      请用中文基于以下分析，评估用户体验（150字以内）：
+      - 核心用户旅程
+      - 最大 UX 风险
+      - 一个设计建议
+
+      {{analysis}}
+    output: design_report
+    depends_on: [pm_analyze]
+
+  - id: final
+    role: "product/product-manager"
+    task: |
+      请用中文综合以下反馈，给出最终结论（200字以内）：
+
+      ## 技术评估
+      {{tech_report}}
+
+      ## 设计评估
+      {{design_report}}
+
+      请输出：是否值得做（是/否），以及 3 条关键行动项。
+    depends_on: [tech_eval, design_eval]

@@ -1,0 +1,122 @@
+name: "商业计划书"
+description: "趋势研究 → 财务预测 + 产品规划 → 高管摘要，生成一份完整的商业计划书"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: "deepseek"
+  model: "deepseek-chat"
+  max_tokens: 4096
+
+concurrency: 2
+
+inputs:
+  - name: idea
+    description: "商业创意/项目简介（一段话描述你要做什么）"
+    required: true
+  - name: stage
+    description: "项目阶段（如：种子轮融资、天使轮、内部立项、新产品线）"
+    required: false
+    default: "天使轮融资"
+  - name: market
+    description: "目标市场（如：中国中小企业、东南亚电商、全球开发者）"
+    required: false
+    default: "中国市场"
+
+steps:
+  - id: market_research
+    role: "product/product-trend-researcher"
+    task: |
+      请为以下商业创意进行市场研究：
+
+      创意：{{idea}}
+      目标市场：{{market}}
+      项目阶段：{{stage}}
+
+      请输出：
+      1. **市场规模**（TAM/SAM/SOM 三层分析）
+      2. **行业趋势**（3-5 个驱动增长的趋势）
+      3. **竞争格局**（现有玩家、市场集中度、进入壁垒）
+      4. **目标客群画像**（早期用户是谁、痛点是什么、付费意愿如何）
+      5. **政策环境**（利好/风险）
+    output: market_report
+
+  - id: financial_model
+    role: "finance/finance-financial-forecaster"
+    task: |
+      基于以下市场研究，构建财务预测模型：
+
+      {{market_report}}
+
+      商业创意：{{idea}}
+      项目阶段：{{stage}}
+
+      请输出：
+      1. **商业模式**（收入来源、定价策略、单位经济模型）
+      2. **3 年财务预测**（表格：收入、成本、毛利、净利，按季度）
+      3. **关键假设**（客户获取成本、转化率、留存率、ARPU 等）
+      4. **资金需求**（需要多少钱、怎么花、能撑多久）
+      5. **盈亏平衡分析**（什么时候开始赚钱）
+    output: financial_plan
+    depends_on: [market_research]
+
+  - id: product_roadmap
+    role: "product/product-manager"
+    task: |
+      基于以下市场研究，规划产品路线图：
+
+      {{market_report}}
+
+      商业创意：{{idea}}
+
+      请输出：
+      1. **核心价值主张**（一句话：我们为谁解决什么问题）
+      2. **MVP 定义**（最小可行产品包含哪些功能，不包含哪些）
+      3. **产品路线图**（3 个阶段，每阶段的目标、功能、里程碑）
+      4. **竞争壁垒**（技术/数据/网络效应/品牌，哪些能构建护城河）
+      5. **团队需求**（各阶段需要什么样的人）
+    output: product_plan
+    depends_on: [market_research]
+
+  - id: executive_summary
+    role: "support/support-executive-summary-generator"
+    task: |
+      请将以下内容整合为一份完整的商业计划书：
+
+      ## 市场研究
+      {{market_report}}
+
+      ## 财务预测
+      {{financial_plan}}
+
+      ## 产品规划
+      {{product_plan}}
+
+      输出格式（投资人/决策者阅读）：
+
+      # [项目名称] 商业计划书
+
+      ## 执行摘要（1 页，最重要）
+      - 一句话描述
+      - 市场机会
+      - 商业模式
+      - 团队优势
+      - 融资需求和用途
+
+      ## 市场分析
+      [整合市场研究]
+
+      ## 产品方案
+      [整合产品规划]
+
+      ## 财务计划
+      [整合财务预测]
+
+      ## 里程碑与时间表
+      [从产品路线图提取]
+
+      ## 风险与应对
+      [从各部分提取风险项，给出应对策略]
+
+      风格：专业、数据驱动、适合给投资人/领导审阅。
+    depends_on: [financial_model, product_roadmap]

@@ -1,0 +1,118 @@
+name: "PR 代码审查"
+description: "三维度并行审查：代码质量、安全性、性能 → 汇总结论"
+
+agents_dir: "agency-agents-zh"
+
+llm:
+  provider: deepseek
+  model: deepseek-chat
+  max_tokens: 4096
+
+concurrency: 3
+
+inputs:
+  - name: pr_diff
+    description: "PR 的 diff 内容（代码变更）"
+    required: true
+  - name: pr_description
+    description: "PR 描述（功能说明、变更目的、影响范围）"
+    required: true
+
+steps:
+  - id: code_quality
+    role: "engineering/engineering-code-reviewer"
+    task: |
+      请对以下 PR 进行代码质量审查：
+
+      ## PR 描述
+      {{pr_description}}
+
+      ## 代码变更
+      {{pr_diff}}
+
+      请从以下维度进行详细审查：
+      1. **代码规范**：命名是否清晰、风格是否一致、是否符合项目约定
+      2. **逻辑正确性**：边界条件处理、错误处理是否完善、是否有逻辑漏洞
+      3. **可维护性**：代码复杂度、函数拆分是否合理、是否有重复代码
+      4. **可读性**：注释是否充分、代码意图是否清晰
+      5. **测试覆盖**：关键路径是否有测试、边界情况是否覆盖
+
+      请对每个维度给出评分（1-5）和具体问题列表。
+    output: quality_report
+
+  - id: security_check
+    role: "engineering/engineering-security-engineer"
+    task: |
+      请对以下 PR 进行安全审查：
+
+      ## PR 描述
+      {{pr_description}}
+
+      ## 代码变更
+      {{pr_diff}}
+
+      请重点检查以下安全风险：
+      1. **注入风险**：SQL 注入、XSS、命令注入等
+      2. **认证授权**：权限检查是否充分、是否存在越权风险
+      3. **数据安全**：敏感数据是否加密、日志是否泄露敏感信息
+      4. **依赖安全**：新引入的依赖是否有已知漏洞
+      5. **配置安全**：是否有硬编码密钥、不安全的默认配置
+
+      请对每个问题标注严重等级（高/中/低），并给出修复建议。
+    output: security_report
+
+  - id: perf_check
+    role: "testing/testing-performance-benchmarker"
+    task: |
+      请对以下 PR 进行性能审查：
+
+      ## PR 描述
+      {{pr_description}}
+
+      ## 代码变更
+      {{pr_diff}}
+
+      请重点评估以下方面：
+      1. **算法效率**：时间复杂度和空间复杂度是否合理
+      2. **资源使用**：内存分配、文件句柄、数据库连接是否正确管理
+      3. **并发安全**：是否有竞态条件、死锁风险
+      4. **I/O 性能**：网络请求、数据库查询是否有 N+1 问题或不必要的重复调用
+      5. **缓存策略**：是否有适合缓存的场景未使用缓存
+
+      请对每个性能问题给出影响评估和优化建议。
+    output: perf_report
+
+  - id: summary
+    role: "engineering/engineering-code-reviewer"
+    task: |
+      综合三维度审查结果，给出最终结论。
+
+      ## 代码质量
+      {{quality_report}}
+
+      ## 安全审查
+      {{security_report}}
+
+      ## 性能审查
+      {{perf_report}}
+
+      输出格式（markdown）：
+      ### 结论：[✅ 可合并 / ⚠️ 需修改 / ❌ 需重写]
+
+      ### 综合评分
+      | 维度 | 评分(1-5) | 关键发现 |
+      |------|----------|---------|
+      | 代码质量 | | |
+      | 安全性 | | |
+      | 性能 | | |
+
+      ### 必须修改（Blocking）
+      1. [严重/高] 问题 → 修复建议
+
+      ### 建议改进（Non-blocking）
+      1. 问题 → 优化方向
+
+      ### 亮点
+      - 值得肯定的实践
+    depends_on: [code_quality, security_check, perf_check]
+    output: final_review
